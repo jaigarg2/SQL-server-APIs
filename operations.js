@@ -1,12 +1,15 @@
-const config = require('./dbconfig');
-const sql = require('mssql');
+
+const mysqlConnection = require('./dbconfig');
 
 async function getInstances(){
 	try {
-		let pool = await sql.connect(config);
-		let instance = await pool.request()
-			.query("SELECT * from Models");
-		return instance.recordsets;
+		let instance = await mysqlConnection
+			.query("SELECT * from GPRS_Test", (err, rows, fields) => {
+				if (!err)
+					return rows;
+				else
+					console.log(err);
+		});
 	}catch (error){
 		console.log(error);
 	}
@@ -14,11 +17,14 @@ async function getInstances(){
 
 async function getInstance(InstanceId){
 	try {
-		let pool = await sql.connect(config);
-		let instance = await pool.request()
-			.input('id', sql.Int, InstanceId)
-			.query("SELECT * from Models where id = @id");
-		return instance.recordsets;
+		let instance = await mysqlConnection
+			.query("SELECT * from GPRS_Test where id = ?", [InstanceId],
+			(err, row, fields) => {
+				if(!err)
+					return row;
+				else
+					console.log(err);
+			});
 	}catch (error){
 		console.log(error);
 	}
@@ -26,22 +32,32 @@ async function getInstance(InstanceId){
 
 async function addInstance(data){
 	try {
-		let pool = await sql.connect(config);
-		let instance = await pool.request()
-			.input('id', sql.Int, data.id)
-			.input('title', sql.NVarChar, data.title)
-			.input('quantity', sql.Int, data.quantity)
-			.input('sensor1', sql.Int, data.sensor1)
-			.input('sensor2', sql.Int, data.sensor2)
-			.execute("InsertModels");
-		return instance.recordsets;
+		let instance = await mysqlConnection
+			.query("INSERT into GPRS_Test (id, sensor1, sensor2) VALUES (?, ?, ?) RETURNING *", 
+				[data.id, data.sensor1, data.sensor2], (err, row, fields) => {
+					if (!err)
+						return row;
+					else
+						console.log(err);
+				});
+	}catch (error){
+		console.log(error);
+	}
+}
+
+async function deleteInstance(id){
+	try {
+		let instance = await mysqlConnection
+			.query("DELETE from GPRS_Test where id = ?", [id]);
+		return;
 	}catch (error){
 		console.log(error);
 	}
 }
 
 module.exports = {
-	getInstances: getInstances
-	getInstance: getInstance
-	addInstance: addInstance
+	getInstances: getInstances,
+	getInstance: getInstance,
+	addInstance: addInstance,
+	deleteInstance: deleteInstance
 }
